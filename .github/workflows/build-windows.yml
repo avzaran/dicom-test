@@ -1,44 +1,47 @@
-trigger:
-  - main
+# .github/workflows/build-windows.yml
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
-pool:
-  vmImage: 'windows-latest'
+jobs:
+  build-windows:
+    runs-on: windows-latest
 
-steps:
-  - task: ChocolateyInstaller@0
-    displayName: 'Install Qt6 Base Dev'
-    inputs:
-      packageName: 'qt6-base-dev'
-      arguments: '--yes'
-  
-  - task: ChocolateyInstaller@0
-    displayName: 'Install VTK (or vtklib)'
-    inputs:
-      packageName: 'vtk'
-      arguments: '--pre --yes'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  - powershell: |
-      Write-Host 'Importing Chocolatey environment helpers...'
-      Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
-      RefreshEnv
-    displayName: 'Refresh environment variables'
-  
-  - task: CMake@1
-    displayName: 'Configure project'
-    inputs:
-      workingDirectory: '$(Build.SourcesDirectory)'
-      generator: 'MinGW Makefiles'
-      cmakeArgs: '-DCMAKE_BUILD_TYPE=Release'
-      options: '-G "MinGW Makefiles"'
-  
-  - task: CMake@1
-    displayName: 'Build project'
-    inputs:
-      workingDirectory: '$(Build.SourcesDirectory)'
-      command: 'build'
-      arguments: '--config Release -- /m'
-  
-  - script: |
-      echo "Tests or post-build steps здесь"
-      # например: ctest -C Release
-    displayName: 'Run tests/post-build'
+      - name: Install Qt6
+        run: |
+          choco install qt6-base-dev --yes
+        shell: pwsh
+
+      - name: Install VTK (if available)
+        run: |
+          choco install vtk --pre --yes
+        shell: pwsh
+
+      - name: Refresh environment variables
+        run: |
+          Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
+          RefreshEnv
+        shell: pwsh
+
+      - name: Configure with CMake
+        run: |
+          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+        shell: bash
+
+      - name: Build with CMake
+        run: |
+          cmake --build build --config Release -- -j
+        shell: bash
+
+      - name: Run tests (optional)
+        run: |
+          cmake --build build --target run_tests
+        shell: bash
