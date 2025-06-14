@@ -2,9 +2,11 @@ name: Build DICOM Viewer (Windows)
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   build-windows:
@@ -47,10 +49,9 @@ jobs:
           cd build
           ctest --output-on-failure --config Release
 
-       - name: Upload build logs
+      - name: Upload build logs
         uses: actions/upload-artifact@v4
         with:
           name: build-log
           path: |
             build/**/CMake*.log
-
